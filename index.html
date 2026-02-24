@@ -356,7 +356,7 @@
                 console.log('Last.fm error:', e);
             }
             
-            console.log('Using fallback tracks');
+            console.log('Using fallback tracks for:', album);
             return fallbackTracks.map((t, i) => ({
                 number: i + 1,
                 title: t.title,
