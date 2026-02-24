@@ -322,32 +322,52 @@
 
         async function fetchTracks(artist, album) {
             try {
-                const encodedQuery = encodeURIComponent(`${album} ${artist}`);
+                const lastFmKey = 'f8333de7cc1db5851b5d18020d886882';
                 const response = await fetch(
-                    `https://corsproxy.io/?https://api.deezer.com/search?q=${encodedQuery}`
+                    `https://ws.audioscrobbler.com/2.0/?method=album.getinfo&api_key=${lastFmKey}&artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}&format=json`
                 );
                 const data = await response.json();
                 
-                if (data.data && data.data.length > 0) {
-                    const track = data.data[0];
-                    if (track.album && track.album.id) {
-                        const albumResponse = await fetch(
-                            `https://corsproxy.io/?https://api.deezer.com/album/${track.album.id}`
-                        );
-                        const albumData = await albumResponse.json();
-                        
-                        if (albumData.tracks && albumData.tracks.data) {
-                            return albumData.tracks.data.map((t, index) => ({
-                                number: index + 1,
-                                title: t.title,
-                                artist: t.artist.name,
-                                duration: t.duration
-                            }));
-                        }
-                    }
+                if (data.album && data.album.tracks && data.album.tracks.track) {
+                    let tracks = data.album.tracks.track;
+                    if (!Array.isArray(tracks)) tracks = [tracks];
+                    
+                    return tracks.map((track, index) => ({
+                        number: index + 1,
+                        title: track.name,
+                        artist: track.artist?.name || artist,
+                        duration: track.duration ? Math.floor(track.duration / 1000) : 180
+                    }));
                 }
             } catch (e) {
                 console.log('Failed to fetch tracks:', e);
+            }
+            
+            try {
+                const encodedQuery = encodeURIComponent(`${album} ${artist}`);
+                const response = await fetch(
+                    `https://api.deezer.com/search/album?q=${encodedQuery}`
+                );
+                const data = await response.json();
+                
+                if (data.data && data.data.length > 0 && data.data[0].id) {
+                    const albumId = data.data[0].id;
+                    const albumResponse = await fetch(
+                        `https://api.deezer.com/album/${albumId}`
+                    );
+                    const albumData = await albumResponse.json();
+                    
+                    if (albumData.tracks && albumData.tracks.data) {
+                        return albumData.tracks.data.map((t, index) => ({
+                            number: index + 1,
+                            title: t.title,
+                            artist: t.artist.name,
+                            duration: t.duration
+                        }));
+                    }
+                }
+            } catch (e) {
+                console.log('Failed to fetch tracks from Deezer:', e);
             }
             return null;
         }
