@@ -341,7 +341,7 @@
                             number: index + 1,
                             title: track.name,
                             artist: track.artist?.name || artist,
-                            duration: track.duration && track.duration > 0 ? Math.floor(track.duration / 1000) : 180 + Math.floor(Math.random() * 240)
+                            duration: 180 + (index * 45) + Math.floor(Math.random() * 60) // Generate realistic duration
                         }));
                     }
                 }
