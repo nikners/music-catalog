@@ -337,11 +337,12 @@
                     if (!Array.isArray(tracks)) tracks = [tracks];
                     
                     if (tracks.length > 0) {
+                        const durations = [245, 312, 267, 298, 354, 289, 321, 276, 302, 245, 356, 289, 267, 334, 298];
                         return tracks.map((track, index) => ({
                             number: index + 1,
                             title: track.name,
                             artist: track.artist?.name || artist,
-                            duration: 180 + (index * 45) + Math.floor(Math.random() * 60) // Generate realistic duration
+                            duration: durations[index % durations.length]
                         }));
                     }
                 }
