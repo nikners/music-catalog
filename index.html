@@ -320,8 +320,9 @@
             }
         }
 
+        // Fetch tracks - Last.fm API only
         async function fetchTracks(artist, album) {
-            console.log('Fetching tracks for:', artist, album);
+            console.log('fetchTracks called for:', artist, album);
             
             const fallbackTracks = [
                 { title: "Opening", duration: 180 },
