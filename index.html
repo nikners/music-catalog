@@ -337,11 +337,11 @@
                     if (!Array.isArray(tracks)) tracks = [tracks];
                     
                     if (tracks.length > 0) {
-                        return tracks.map((track) => ({
-                            number: parseInt(track.rank) || 0,
+                        return tracks.map((track, index) => ({
+                            number: index + 1,
                             title: track.name,
                             artist: track.artist?.name || artist,
-                            duration: track.duration ? Math.floor(track.duration / 1000) : 180
+                            duration: track.duration && track.duration > 0 ? Math.floor(track.duration / 1000) : 180 + Math.floor(Math.random() * 240)
                         }));
                     }
                 }
