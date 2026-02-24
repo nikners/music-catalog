@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Music Catalog - Discover Your Favorite Albums</title>
+    <link rel="stylesheet" href="main.css?v=4">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+    <script>
+        window.addEventListener('pageshow', function(event) {
+            if (event.persisted || (window.performance && window.performance.getEntriesByType("navigation")[0].type === "back_forward")) {
+                location.reload();
+            }
+        });
+    </script>
+    <style>
+        header { background: #0a0a0a; padding: 1rem 0; position: sticky; top: 0; z-index: 1000; }
+        .nav-container { max-width: 1400px; margin: 0 auto; padding: 0 2rem; display: flex; justify-content: space-between; align-items: center; }
+        .logo h1 { font-size: 1.5rem; font-weight: 700; color: #fff; }
+        .logo h1 span { color: #00d4aa; }
+        .nav-menu { display: flex; list-style: none; gap: 2.5rem; }
+        .nav-link { color: #a0a0a0; text-decoration: none; font-weight: 500; text-transform: uppercase; }
+        .nav-link:hover, .nav-link.active { color: #00d4aa; }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="nav-container">
+                <div class="logo">
+                    <h1>MUSIC <span>CATALOG</span></h1>
+                </div>
+                <ul class="nav-menu">
+                    <li><a href="index.html" class="nav-link active">Home</a></li>
+                    <li><a href="about.html" class="nav-link">About</a></li>
+                    <li><a href="contact.html" class="nav-link">Contact</a></li>
+                </ul>
+                <div class="search-bar">
+                    <input type="text" id="searchInput" placeholder="Search albums, artists...">
+                    <button id="searchBtn">➜</button>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <section class="hero">
+            <div class="hero-content">
+                <h2>Discover Music</h2>
+                <p>Explore thousands of albums from various artists</p>
+                <div class="filter-buttons">
+                    <button class="filter-btn" data-filter="all">All Albums</button>
+                    <button class="filter-btn" data-filter="pop">Pop</button>
+                    <button class="filter-btn" data-filter="rock">Rock</button>
+                    <button class="filter-btn" data-filter="jazz">Jazz</button>
+                    <button class="filter-btn" data-filter="classical">Classical</button>
+                </div>
+            </div>
+        </section>
+
+        <section class="albums-grid" id="albumsGrid">
+            <div class="loading">
+                <div class="loading-spinner"></div>
+            </div>
+        </section>
+
+        <div class="load-more-container">
+            <button id="loadMoreBtn" class="load-more-btn">Load More</button>
+        </div>
+    </main>
+
+    <footer>
+        <div class="footer-content">
+            <p>&copy; 2026 Music Catalog. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <div id="albumShowcase" class="album-showcase">
+        <div class="showcase-backdrop"></div>
+        <div class="showcase-content">
+            <button class="showcase-close">&times;</button>
+            <div class="showcase-header">
+                <div class="showcase-cover">
+                    <img id="showcaseCover" src="" alt="">
+                </div>
+                <div class="showcase-info">
+                    <span class="showcase-type">ALBUM</span>
+                    <h2 id="showcaseTitle"></h2>
+                    <p id="showcaseArtist"></p>
+                    <div class="showcase-meta">
+                        <span id="showcaseGenre"></span>
+                        <span id="showcaseYear"></span>
+                        <span id="showcaseTracks"></span>
+                    </div>
+                    <div class="showcase-actions">
+                        <button class="play-btn">Play</button>
+                        <button class="shuffle-btn">Shuffle</button>
+                    </div>
+                </div>
+            </div>
+            <div class="showcase-tracks">
+                <div class="tracks-header">
+                    <span class="track-num">#</span>
+                    <span class="track-title">Title</span>
+                    <span class="track-duration">Duration</span>
+                </div>
+                <div id="tracksList"></div>
+            </div>
+            <div class="showcase-footer">
+                <span id="totalDuration"></span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://kvshriqhqfmpnwzbcbie.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt2c2hyaXFocWZtcG53emJjYmllIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4ODg3NTksImV4cCI6MjA4NzQ2NDc1OX0.rWPXA7T9EXzKV_M91ctgqUOO5oLHDLqsI4Ak9K1WKMk';
+
+        let supabaseClient;
+        if (typeof window.supabase !== 'undefined') {
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        } else {
+            supabaseClient = { createClient: () => null };
+        }
+
+        const itemsPerPage = 8;
+        let currentPage = 1;
+        let currentFilter = 'all';
+        let currentSearch = '';
+        let allAlbums = [];
+        const coverCache = {};
+
+        async function getAlbumCover(artist, album) {
+            const key = `${artist}-${album}`;
+            if (coverCache[key]) return coverCache[key];
+            
+            const colors = ['667eea', 'f093fb', 'f5576c', '4facfe', '00f2fe', 'a8edea', 'ffecd2', 'fcb69f', 'ff9a9e', 'fad0c4', 'a18cd1', 'fbc2eb'];
+            const colorIndex = (artist.length + album.length) % colors.length;
+            const bgColor = colors[colorIndex];
+            const text = encodeURIComponent(album.substring(0, 12) + (album.length > 12 ? '...' : ''));
+            
+            try {
+                const lastFmKey = 'f8333de7cc1db5851b5d18020d886882';
+                const response = await fetch(
+                    `https://ws.audioscrobbler.com/2.0/?method=album.getinfo&api_key=${lastFmKey}&artist=${encodeURIComponent(artist)}&album=${encodeURIComponent(album)}&format=json`
+                );
+                const data = await response.json();
+                
+                if (data.album && data.album.image) {
+                    const images = data.album.image;
+                    const coverUrl = images.find(img => img.size === 'extralarge')?.['#text'] || 
+                                     images.find(img => img.size === 'large')?.['#text'];
+                    if (coverUrl && coverUrl.length > 0) {
+                        coverCache[key] = coverUrl;
+                        return coverUrl;
+                    }
+                }
+            } catch (e) {
+                console.log('Cover fetch failed for', artist, album);
+            }
+            
+            const fallback = `https://placehold.co/300x300/${bgColor}/ffffff?text=${text}`;
+            coverCache[key] = fallback;
+            return fallback;
+        }
+
+        async function loadAlbums() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('albums')
+                    .select('*')
+                    .order('title', { ascending: true });
+
+                if (error) throw error;
+                
+                if (!data || data.length === 0) {
+                    document.getElementById('albumsGrid').innerHTML = `
+                        <div class="no-results">
+                            <h3>No albums found</h3>
+                            <p>Table is empty - add albums in Supabase</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                    document.getElementById('albumsGrid').innerHTML = '<div class="loading"><div class="loading-spinner"></div></div>';
+                
+                const uniqueAlbums = [...new Map(data.map(album => [`${album.title}-${album.artist}`, album])).values()];
+                
+                allAlbums = await Promise.all(uniqueAlbums.map(async (album) => {
+                    const cover = await getAlbumCover(album.artist, album.title);
+                    return { ...album, cover };
+                }));
+                
+                displayAlbums(filterAlbums());
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('albumsGrid').innerHTML = `
+                    <div class="no-results">
+                        <h3>Error</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        function displayAlbums(albumsToDisplay) {
+            const grid = document.getElementById('albumsGrid');
+            grid.innerHTML = '';
+
+            if (albumsToDisplay.length === 0) {
+                grid.innerHTML = `
+                    <div class="no-results">
+                        <h3>No albums found</h3>
+                        <p>Try adjusting your search or filter</p>
+                    </div>
+                `;
+                document.getElementById('loadMoreBtn').style.display = 'none';
+                return;
+            }
+
+            currentPage = 1;
+            displayAlbumsBatch(albumsToDisplay);
+            updateLoadMoreButton(albumsToDisplay.length);
+        }
+
+        function displayAlbumsBatch(albumsToDisplay) {
+            const grid = document.getElementById('albumsGrid');
+            
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            const paginatedAlbums = albumsToDisplay.slice(startIndex, endIndex);
+
+            paginatedAlbums.forEach((album, index) => {
+                const card = document.createElement('div');
+                card.className = 'album-card';
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(20px)';
+                card.innerHTML = `
+                    <img src="${album.cover}" alt="${album.title}" onerror="this.src='https://placehold.co/300x300/667eea/ffffff?text=${encodeURIComponent(album.title.substring(0,15))}'">
+                    <div class="album-info">
+                        <h3 class="album-title">${album.title}</h3>
+                        <p class="album-artist">${album.artist}</p>
+                        <span class="album-genre">${album.genre}</span>
+                    </div>
+                `;
+                card.addEventListener('click', () => openAlbumShowcase(album));
+                grid.appendChild(card);
+                
+                setTimeout(() => {
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, index * 50);
+            });
+
+            currentPage++;
+        }
+
+        function updateLoadMoreButton(totalItems) {
+            const btn = document.getElementById('loadMoreBtn');
+            const loadedCount = (currentPage - 1) * itemsPerPage;
+            btn.style.display = loadedCount >= totalItems ? 'none' : 'block';
+        }
+
+        function loadMoreAlbums() {
+            const filtered = filterAlbums();
+            displayAlbumsBatch(filtered);
+            updateLoadMoreButton(filtered.length);
+            
+            window.scrollTo({ top: window.scrollY + 200, behavior: 'smooth' });
+        }
+
+        function filterAlbums() {
+            let filtered = [...allAlbums];
+
+            if (currentFilter !== 'all') {
+                filtered = filtered.filter(album => album.genre === currentFilter);
+            }
+
+            if (currentSearch.trim() !== '') {
+                const searchTerm = currentSearch.toLowerCase();
+                filtered = filtered.filter(album => 
+                    album.title.toLowerCase().includes(searchTerm) ||
+                    album.artist.toLowerCase().includes(searchTerm) ||
+                    album.genre.toLowerCase().includes(searchTerm)
+                );
+            }
+
+            return filtered;
+        }
+
+        async function openAlbumShowcase(album) {
+            const showcase = document.getElementById('albumShowcase');
+            document.getElementById('showcaseCover').src = album.cover;
+            document.getElementById('showcaseTitle').textContent = album.title;
+            document.getElementById('showcaseArtist').textContent = album.artist;
+            document.getElementById('showcaseGenre').textContent = album.genre;
+            document.getElementById('showcaseYear').textContent = '2024';
+            
+            const tracksList = document.getElementById('tracksList');
+            tracksList.innerHTML = '<div class="loading"><div class="loading-spinner"></div></div>';
+            
+            showcase.classList.add('active');
+            document.body.style.overflow = 'hidden';
+            
+            const tracks = await fetchTracks(album.artist, album.title);
+            
+            if (tracks && tracks.length > 0) {
+                displayTracks(tracks);
+                document.getElementById('showcaseTracks').textContent = `${tracks.length} songs`;
+                const totalSecs = tracks.reduce((acc, t) => acc + t.duration, 0);
+                document.getElementById('totalDuration').textContent = formatTotalDuration(totalSecs);
+            } else {
+                tracksList.innerHTML = '<div class="no-results"><p>No tracks available</p></div>';
+                document.getElementById('showcaseTracks').textContent = '0 songs';
+                document.getElementById('totalDuration').textContent = '';
+            }
+        }
+
+        async function fetchTracks(artist, album) {
+            try {
+                const encodedQuery = encodeURIComponent(`${album} ${artist}`);
+                const response = await fetch(
+                    `https://corsproxy.io/?https://api.deezer.com/search?q=${encodedQuery}`
+                );
+                const data = await response.json();
+                
+                if (data.data && data.data.length > 0) {
+                    const track = data.data[0];
+                    if (track.album && track.album.id) {
+                        const albumResponse = await fetch(
+                            `https://corsproxy.io/?https://api.deezer.com/album/${track.album.id}`
+                        );
+                        const albumData = await albumResponse.json();
+                        
+                        if (albumData.tracks && albumData.tracks.data) {
+                            return albumData.tracks.data.map((t, index) => ({
+                                number: index + 1,
+                                title: t.title,
+                                artist: t.artist.name,
+                                duration: t.duration
+                            }));
+                        }
+                    }
+                }
+            } catch (e) {
+                console.log('Failed to fetch tracks:', e);
+            }
+            return null;
+        }
+
+        function displayTracks(tracks) {
+            const tracksList = document.getElementById('tracksList');
+            tracksList.innerHTML = tracks.map(track => `
+                <div class="track-item">
+                    <span class="track-num">
+                        <span class="track-num-text">${track.number}</span>
+                        <span class="track-play">▶</span>
+                    </span>
+                    <span class="track-title">${track.title}</span>
+                    <span class="track-duration">${formatDuration(track.duration)}</span>
+                </div>
+            `).join('');
+        }
+
+        function formatDuration(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function formatTotalDuration(seconds) {
+            const hours = Math.floor(seconds / 3600);
+            const mins = Math.floor((seconds % 3600) / 60);
+            if (hours > 0) {
+                return `${hours} hr ${mins} min`;
+            }
+            return `${mins} min`;
+        }
+
+        function setupShowcaseListeners() {
+            const showcase = document.getElementById('albumShowcase');
+            const closeBtn = document.querySelector('.showcase-close');
+            const backdrop = document.querySelector('.showcase-backdrop');
+            
+            closeBtn.addEventListener('click', closeShowcase);
+            backdrop.addEventListener('click', closeShowcase);
+            
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && showcase.classList.contains('active')) {
+                    closeShowcase();
+                }
+            });
+        }
+
+        function closeShowcase() {
+            const showcase = document.getElementById('albumShowcase');
+            showcase.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        function setupEventListeners() {
+            const searchInput = document.getElementById('searchInput');
+            const searchBtn = document.getElementById('searchBtn');
+            const filterButtons = document.querySelectorAll('.filter-btn');
+
+            searchInput.addEventListener('input', (e) => {
+                currentSearch = e.target.value;
+                currentPage = 1;
+                displayAlbums(filterAlbums());
+            });
+
+            searchBtn.addEventListener('click', () => {
+                currentSearch = searchInput.value;
+                currentPage = 1;
+                displayAlbums(filterAlbums());
+            });
+
+            searchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    currentSearch = e.target.value;
+                    currentPage = 1;
+                    displayAlbums(filterAlbums());
+                }
+            });
+
+            filterButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    filterButtons.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentFilter = btn.dataset.filter;
+                    currentPage = 1;
+                    displayAlbums(filterAlbums());
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                });
+            });
+
+            const loadMoreBtn = document.getElementById('loadMoreBtn');
+            loadMoreBtn.addEventListener('click', loadMoreAlbums);
+
+            window.addEventListener('scroll', () => {
+                if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 500) {
+                    const btn = document.getElementById('loadMoreBtn');
+                    if (btn.style.display !== 'none') {
+                        loadMoreAlbums();
+                    }
+                }
+            });
+        }
+
+        loadAlbums();
+        setupEventListeners();
+        setupShowcaseListeners();
+    </script>
+</body>
+</html>
