@@ -11,8 +11,8 @@
     --bg-hover: #252525;
     --text-primary: #ffffff;
     --text-secondary: #a0a0a0;
-    --accent: #00d4aa;
-    --accent-hover: #00f5c4;
+    --accent: #4f8ef7;
+    --accent-hover: #6b9cff;
     --border: #2a2a2a;
 }
 
@@ -717,25 +717,17 @@ footer {
 }
 
 .track-item:hover {
-    background: rgba(255, 255, 255, 0.05);
+    background: transparent;
 }
 
 .track-num {
     color: var(--text-secondary);
     font-size: 0.9rem;
-}
-
-.track-item:hover .track-num {
-    display: none;
+    width: 30px;
 }
 
 .track-play {
     display: none;
-    color: var(--text-primary);
-}
-
-.track-item:hover .track-play {
-    display: block;
 }
 
 .track-title {
@@ -745,10 +737,7 @@ footer {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-}
-
-.track-item:hover .track-title {
-    color: var(--accent);
+    transition: color 0.2s ease;
 }
 
 .track-duration {
