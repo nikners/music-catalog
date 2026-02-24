@@ -23,18 +23,18 @@
             left: 0;
             width: 100%;
             height: 100%;
-            z-index: -1;
+            z-index: -2;
             overflow: hidden;
             background: #0a0a0a;
         }
         .album-bg img {
             position: absolute;
-            width: 300px;
-            height: 300px;
+            width: 250px;
+            height: 250px;
             object-fit: cover;
             opacity: 0;
-            filter: blur(30px) brightness(0.3);
-            animation: albumFade 20s infinite;
+            filter: blur(40px) brightness(0.5);
+            animation: albumFade 15s infinite;
         }
         .album-bg-overlay {
             position: fixed;
@@ -42,12 +42,12 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(10, 10, 10, 0.85);
+            background: rgba(10, 10, 10, 0.6);
             z-index: -1;
         }
         @keyframes albumFade {
             0%, 100% { opacity: 0; transform: scale(1); }
-            50% { opacity: 0.4; transform: scale(1.1); }
+            50% { opacity: 0.6; transform: scale(1.1); }
         }
         header { background: #0a0a0a; padding: 1rem 0; position: sticky; top: 0; z-index: 1000; }
         .nav-container { max-width: 1400px; margin: 0 auto; padding: 0 2rem; display: flex; justify-content: space-between; align-items: center; }
