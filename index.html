@@ -17,37 +17,19 @@
         });
     </script>
     <style>
-        .album-bg {
+        body::before {
+            content: '';
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            z-index: -2;
-            overflow: hidden;
-            background: #0a0a0a;
-        }
-        .album-bg img {
-            position: absolute;
-            width: 250px;
-            height: 250px;
-            object-fit: cover;
-            opacity: 0;
-            filter: blur(40px) brightness(0.5);
-            animation: albumFade 15s infinite;
-        }
-        .album-bg-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(10, 10, 10, 0.6);
             z-index: -1;
-        }
-        @keyframes albumFade {
-            0%, 100% { opacity: 0; transform: scale(1); }
-            50% { opacity: 0.6; transform: scale(1.1); }
+            background-color: #0a0a0a;
+            background-size: cover;
+            background-position: center;
+            filter: blur(0px) brightness(0.3);
+            transition: background-image 1s ease-in-out;
         }
         header { background: #0a0a0a; padding: 1rem 0; position: sticky; top: 0; z-index: 1000; }
         .nav-container { max-width: 1400px; margin: 0 auto; padding: 0 2rem; display: flex; justify-content: space-between; align-items: center; }
@@ -59,8 +41,6 @@
     </style>
 </head>
 <body>
-    <div class="album-bg" id="albumBg"></div>
-    <div class="album-bg-overlay"></div>
     <header>
         <nav>
             <div class="nav-container">
@@ -229,7 +209,7 @@
                     return { ...album, cover };
                 }));
                 
-                setAlbumBackground(allAlbums);
+                setDynamicBackground(allAlbums);
                 displayAlbums(filterAlbums());
             } catch (error) {
                 console.error('Error:', error);
@@ -242,19 +222,10 @@
             }
         }
 
-        function setAlbumBackground(albums) {
-            const bg = document.getElementById('albumBg');
-            bg.innerHTML = '';
-            const shuffled = [...albums].sort(() => 0.5 - Math.random()).slice(0, 8);
-            shuffled.forEach((album, i) => {
-                const img = document.createElement('img');
-                img.src = album.cover;
-                img.style.left = `${Math.random() * 70}%`;
-                img.style.top = `${Math.random() * 70}%`;
-                img.style.animationDelay = `${i * 2.5}s`;
-                img.style.transform = `rotate(${Math.random() * 30 - 15}deg)`;
-                bg.appendChild(img);
-            });
+        function setDynamicBackground(albums) {
+            const shuffled = [...albums].sort(() => 0.5 - Math.random()).slice(0, 6);
+            const bgImages = shuffled.map(a => `url(${a.cover})`).join(', ');
+            document.body.style.backgroundImage = bgImages;
         }
 
         function displayAlbums(albumsToDisplay) {
